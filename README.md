@@ -52,13 +52,13 @@ Your PAT needs the `write:packages` scope. Create one at **GitHub â†’ Settings â
 ### 2. Build the image
 
 ```bash
-docker build -t ghcr.io/<YOUR_GITHUB_USERNAME>/clabpktgen:latest .
+docker build -t ghcr.io/bdpost/clabpktgen:latest .
 ```
 
 ### 3. Push
 
 ```bash
-docker push ghcr.io/<YOUR_GITHUB_USERNAME>/clabpktgen:latest
+docker push ghcr.io/bdpost/clabpktgen:latest
 ```
 
 ### 4. Make the package public (optional but recommended for clab machines)
@@ -80,7 +80,7 @@ topology:
   nodes:
     pktgen:
       kind: linux
-      image: ghcr.io/<YOUR_GITHUB_USERNAME>/clabpktgen:latest
+      image: ghcr.io/bdpost/clabpktgen:latest
       mgmt-ipv4: 172.20.20.10
       cap-add:
         - NET_ADMIN
@@ -107,7 +107,7 @@ topology:
   nodes:
     pktgen:
       kind: linux
-      image: ghcr.io/<YOUR_GITHUB_USERNAME>/clabpktgen:latest
+      image: ghcr.io/bdpost/clabpktgen:latest
       mgmt-ipv4: 172.20.20.10
       cap-add:
         - NET_ADMIN

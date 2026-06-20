@@ -24,6 +24,8 @@
   --badge-tx:   #1a3a3a;
   --badge-pay:  #2a2a1a;
   --badge-log:  #1a1a2e;
+  --badge-net:  #1a2a1a;
+  --badge-rt:   #2a1a2a;
 
   --radius:  8px;
   --radius-sm: 5px;
@@ -171,6 +173,70 @@ main {
 .badge.tx   { background: var(--badge-tx);   color: #38bdf8; }
 .badge.pay  { background: var(--badge-pay);  color: #fbbf24; }
 .badge.log  { background: var(--badge-log);  color: var(--text-dim); }
+.badge.net  { background: var(--badge-net);  color: var(--green-hi); }
+.badge.rt   { background: var(--badge-rt);   color: #c084fc; }
+
+/* ─── Interface pill ─── */
+.iface-pill {
+  margin-left: auto;
+  font-size: .68rem;
+  font-weight: 700;
+  font-family: 'Consolas', 'SF Mono', monospace;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(63,185,80,.15);
+  border: 1px solid rgba(63,185,80,.4);
+  color: var(--green-hi);
+  letter-spacing: .03em;
+}
+
+.iface-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* ─── Route list ─── */
+.route-list { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+
+.route-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: 'Consolas', 'SF Mono', monospace;
+  font-size: .78rem;
+}
+
+.route-item-text { flex: 1; color: var(--text-hi); }
+.route-item-via  { color: var(--text-dim); margin: 0 4px; }
+.route-item-dev  { color: #c084fc; }
+
+.btn-icon {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 1px 6px;
+  font-size: .78rem;
+  line-height: 1.4;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+.btn-icon:hover { border-color: var(--red); color: var(--red); background: rgba(248,81,73,.08); }
+
+.route-clear {
+  display: block;
+  margin-top: 8px;
+  font-size: .72rem;
+  color: var(--red) !important;
+}
+.route-clear:hover { background: rgba(248,81,73,.08) !important; }
 
 /* ─── Toggle Switch ─── */
 .toggle {

@@ -38,6 +38,17 @@ const els = {
   statusText:      $('statusText'),
   liveCounter:     $('liveCounter'),
   liveCount:       $('liveCount'),
+  ifaceConfigIface:$('ifaceConfigIface'),
+  ifaceIp:         $('ifaceIp'),
+  ifacePill:       $('ifacePill'),
+  btnIfaceUp:      $('btnIfaceUp'),
+  btnIfaceDown:    $('btnIfaceDown'),
+  routeDst:        $('routeDst'),
+  routeNh:         $('routeNh'),
+  routeIface:      $('routeIface'),
+  btnRouteAdd:     $('btnRouteAdd'),
+  routeList:       $('routeList'),
+  btnRouteClear:   $('btnRouteClear'),
 };
 
 // ─── Logging ─────────────────────────────────────────────────────────────────
@@ -103,24 +114,147 @@ els.dscpSelect.addEventListener('change', () => {
   }
 });
 
+// ─── Interface Config ─────────────────────────────────────────────────────────
+els.btnIfaceUp.addEventListener('click', async () => {
+  const body = { interface: els.ifaceConfigIface.value, ip: els.ifaceIp.value.trim() };
+  els.btnIfaceUp.disabled = true;
+  try {
+    const res  = await fetch('/api/interface/up', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Configure failed');
+    els.ifacePill.textContent = body.ip;
+    els.ifacePill.classList.remove('hidden');
+    logTs(`Interface ${data.interface} configured — ${data.ip}`, 'success');
+  } catch (err) {
+    logTs(`Interface configure error: ${err.message}`, 'error');
+  } finally {
+    els.btnIfaceUp.disabled = false;
+  }
+});
+
+els.btnIfaceDown.addEventListener('click', async () => {
+  const iface = els.ifaceConfigIface.value;
+  els.btnIfaceDown.disabled = true;
+  try {
+    const res  = await fetch('/api/interface/down', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ interface: iface }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Reset failed');
+    els.ifacePill.classList.add('hidden');
+    els.routeList.innerHTML = '';
+    els.btnRouteClear.classList.add('hidden');
+    logTs(`Interface ${data.interface} reset — address and routes flushed`, 'warn');
+  } catch (err) {
+    logTs(`Interface reset error: ${err.message}`, 'error');
+  } finally {
+    els.btnIfaceDown.disabled = false;
+  }
+});
+
+// ─── Routes ──────────────────────────────────────────────────────────────────
+function addRouteItem(prefix, nexthop, iface) {
+  const item = document.createElement('div');
+  item.className = 'route-item';
+  item.dataset.prefix  = prefix;
+  item.dataset.nexthop = nexthop;
+  item.dataset.iface   = iface;
+  item.innerHTML =
+    `<span class="route-item-text">${prefix}</span>` +
+    `<span class="route-item-via">via</span>` +
+    `<span class="route-item-text">${nexthop}</span>` +
+    `<span class="route-item-via">dev</span>` +
+    `<span class="route-item-dev">${iface}</span>` +
+    `<button class="btn-icon" title="Remove">✕</button>`;
+  item.querySelector('.btn-icon').addEventListener('click', async () => {
+    try {
+      const res = await fetch('/api/routes/del', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prefix, nexthop, interface: iface }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Delete failed');
+      item.remove();
+      if (!els.routeList.children.length) els.btnRouteClear.classList.add('hidden');
+      logTs(`Route removed: ${prefix} via ${nexthop} dev ${iface}`, 'warn');
+    } catch (err) {
+      logTs(`Route remove error: ${err.message}`, 'error');
+    }
+  });
+  els.routeList.appendChild(item);
+  els.btnRouteClear.classList.remove('hidden');
+}
+
+els.btnRouteAdd.addEventListener('click', async () => {
+  const prefix  = els.routeDst.value.trim();
+  const nexthop = els.routeNh.value.trim();
+  const iface   = els.routeIface.value;
+  if (!prefix || !nexthop) {
+    logTs('Destination and Next Hop are required.', 'warn');
+    return;
+  }
+  els.btnRouteAdd.disabled = true;
+  try {
+    const res = await fetch('/api/routes/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prefix, nexthop, interface: iface }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Add failed');
+    addRouteItem(prefix, nexthop, iface);
+    els.routeDst.value = '';
+    els.routeNh.value  = '';
+    logTs(`Route added: ${prefix} via ${nexthop} dev ${iface}`, 'success');
+  } catch (err) {
+    logTs(`Route add error: ${err.message}`, 'error');
+  } finally {
+    els.btnRouteAdd.disabled = false;
+  }
+});
+
+els.btnRouteClear.addEventListener('click', async () => {
+  const iface = els.routeIface.value;
+  try {
+    const res = await fetch('/api/routes/flush', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ interface: iface }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Flush failed');
+    els.routeList.innerHTML = '';
+    els.btnRouteClear.classList.add('hidden');
+    logTs(`All routes flushed on ${data.interface}`, 'warn');
+  } catch (err) {
+    logTs(`Route flush error: ${err.message}`, 'error');
+  }
+});
+
 // ─── Load interfaces ─────────────────────────────────────────────────────────
 async function loadInterfaces() {
   try {
     const res = await fetch('/api/interfaces');
     if (!res.ok) return;
     const { interfaces } = await res.json();
-    els.iface.innerHTML = '';
-    interfaces.forEach(iface => {
-      const opt = document.createElement('option');
-      opt.value = iface;
-      opt.textContent = iface;
-      if (iface === 'eth1') opt.selected = true;
-      els.iface.appendChild(opt);
+    [els.iface, els.ifaceConfigIface, els.routeIface].forEach(sel => {
+      sel.innerHTML = '';
+      interfaces.forEach(iface => {
+        const opt = document.createElement('option');
+        opt.value = iface;
+        opt.textContent = iface;
+        if (iface === 'eth1') opt.selected = true;
+        sel.appendChild(opt);
+      });
+      if ([...sel.options].some(o => o.value === 'eth1')) sel.value = 'eth1';
     });
-    // Default to eth1 if present
-    if ([...els.iface.options].some(o => o.value === 'eth1')) {
-      els.iface.value = 'eth1';
-    }
   } catch {
     logTs('Could not fetch interface list — defaulting to eth1.', 'warn');
   }
