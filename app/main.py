@@ -73,6 +73,20 @@ class RouteFlush(BaseModel):
     interface: str = "eth1"
 
 
+# ─── RX models ────────────────────────────────────────────────────────────────
+
+class RxStartRequest(BaseModel):
+    interface: str = "eth1"
+    protocol: str = "all"   # "all" | "udp" | "tcp" | "icmp"
+    port: Optional[int] = None
+
+
+class ListenerStartRequest(BaseModel):
+    protocol: str = "tcp"   # "tcp" | "udp"
+    port: int = 8888
+    bind_ip: str = "0.0.0.0"
+
+
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
 def _ipcmd(*args: str) -> None:
@@ -81,7 +95,7 @@ def _ipcmd(*args: str) -> None:
         raise RuntimeError(result.stderr.strip() or result.stdout.strip())
 
 
-# ─── Packet endpoints ─────────────────────────────────────────────────────────
+# ─── TX endpoints ─────────────────────────────────────────────────────────────
 
 @app.post("/api/send")
 async def send(req: SendRequest):
@@ -184,3 +198,58 @@ async def route_flush(req: RouteFlush):
         return {"status": "ok", "interface": req.interface}
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─── RX endpoints ─────────────────────────────────────────────────────────────
+
+@app.post("/api/rx/start")
+async def rx_start(req: RxStartRequest):
+    ok, msg = packet_gen.start_rx(req.interface, req.protocol, req.port)
+    if not ok:
+        raise HTTPException(status_code=409, detail=msg)
+    return {"status": "ok", "message": msg, "interface": req.interface}
+
+
+@app.post("/api/rx/stop")
+async def rx_stop():
+    count = packet_gen.stop_rx()
+    return {"status": "ok", "count": count}
+
+
+@app.get("/api/rx/packets")
+async def rx_packets(since: int = 0):
+    return {
+        "packets":   packet_gen.get_rx_packets(since),
+        "receiving": packet_gen.is_receiving(),
+        "count":     packet_gen.rx_count(),
+    }
+
+
+@app.delete("/api/rx/packets")
+async def rx_clear():
+    baseline = packet_gen.clear_rx_packets()
+    return {"status": "ok", "baseline": baseline}
+
+
+# ─── Socket Listener endpoints ────────────────────────────────────────────────
+
+@app.post("/api/listener/start")
+async def listener_start(req: ListenerStartRequest):
+    ok, msg = packet_gen.start_listener(req.protocol, req.port, req.bind_ip)
+    if not ok:
+        raise HTTPException(status_code=409, detail=msg)
+    return {"status": "ok", "message": msg}
+
+
+@app.post("/api/listener/stop")
+async def listener_stop():
+    count = packet_gen.stop_listener()
+    return {"status": "ok", "count": count}
+
+
+@app.get("/api/listener/status")
+async def listener_status():
+    return {
+        "listening": packet_gen.is_listening(),
+        "count":     packet_gen.listener_count(),
+    }

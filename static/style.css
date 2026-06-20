@@ -22,6 +22,8 @@
   --badge-l4:   #3d2a00;
   --badge-vlan: #2e1a4a;
   --badge-tx:   #1a3a3a;
+  --badge-rx:   #0d2a2a;
+  --badge-cap:  #2a1a3a;
   --badge-pay:  #2a2a1a;
   --badge-log:  #1a1a2e;
   --badge-net:  #1a2a1a;
@@ -37,7 +39,7 @@ html { font-size: 14px; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', 'SF Mono', 'Menlo', 'Liberation Mono', monospace;
   line-height: 1.5;
   min-height: 100vh;
 }
@@ -78,13 +80,26 @@ header {
 }
 
 /* ─── Status Badge ─── */
+.header-badges {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.badge-label {
+  font-size: .65rem;
+  opacity: .65;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+
 .status-badge {
   display: flex;
   align-items: center;
   gap: 7px;
   font-size: .75rem;
   font-weight: 700;
-  letter-spacing: .08em;
+  letter-spacing: .06em;
   padding: 5px 12px;
   border-radius: 20px;
   border: 1px solid var(--border);
@@ -106,9 +121,16 @@ header {
   animation: pulse 1.2s infinite;
 }
 
-.status-badge.sending { border-color: var(--green); color: var(--green-hi); }
-.status-badge.error   { border-color: var(--red);   color: var(--red); }
-.status-badge.idle    { color: var(--text-dim); }
+.status-badge.sending   { border-color: var(--green);  color: var(--green-hi); }
+.status-badge.error     { border-color: var(--red);    color: var(--red); }
+.status-badge.idle      { color: var(--text-dim); }
+.status-badge.receiving { border-color: #2dd4bf; color: #5eead4; }
+
+.status-badge.receiving .status-dot {
+  background: #2dd4bf;
+  box-shadow: 0 0 0 3px rgba(45,212,191,.25);
+  animation: pulse 1.2s infinite;
+}
 
 @keyframes pulse {
   0%, 100% { box-shadow: 0 0 0 0px rgba(63,185,80,.4); }
@@ -171,6 +193,8 @@ main {
 .badge.l4   { background: var(--badge-l4);   color: var(--orange); }
 .badge.vlan { background: var(--badge-vlan); color: #a78bfa; }
 .badge.tx   { background: var(--badge-tx);   color: #38bdf8; }
+.badge.rx   { background: var(--badge-rx);   color: #2dd4bf; }
+.badge.cap  { background: var(--badge-cap);  color: #c084fc; }
 .badge.pay  { background: var(--badge-pay);  color: #fbbf24; }
 .badge.log  { background: var(--badge-log);  color: var(--text-dim); }
 .badge.net  { background: var(--badge-net);  color: var(--green-hi); }
@@ -468,3 +492,161 @@ select {
 .log-warn    { color: var(--orange); }
 
 .log-line + .log-line { margin-top: 2px; }
+
+/* ─── Tab Bar ─── */
+.tab-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mode-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: .8rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  transition: all .15s;
+}
+
+.mode-tab:hover {
+  background: var(--surface2);
+  color: var(--text);
+  border-color: var(--border2);
+}
+
+.mode-tab.active {
+  background: var(--surface2);
+  border-color: var(--accent);
+  color: var(--text-hi);
+}
+
+/* ─── Panels ─── */
+.panel { margin-bottom: 0; }
+
+/* ─── RX Config ─── */
+.rx-fields {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 760px) {
+  .rx-fields { grid-template-columns: 1fr; }
+}
+
+.rx-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.listener-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 7px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: .75rem;
+  color: var(--green-hi);
+  font-weight: 600;
+}
+
+/* ─── Capture Table ─── */
+.capture-card { margin-top: 0; }
+
+.capture-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.capture-header h2 { margin-bottom: 0; flex: 1; }
+
+.capture-table-wrap {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 420px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.capture-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .76rem;
+}
+
+.capture-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.capture-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background .1s;
+}
+
+.capture-table tbody tr:last-child { border-bottom: none; }
+.capture-table tbody tr:hover { background: var(--surface2); }
+
+.capture-table td {
+  padding: 5px 10px;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.capture-empty-msg {
+  text-align: center;
+  color: var(--text-dim);
+  padding: 32px !important;
+  font-style: italic;
+}
+
+/* column widths */
+.col-id    { width: 52px; color: var(--text-dim); }
+.col-time  { width: 120px; color: var(--text-dim); }
+.col-proto { width: 60px; font-weight: 700; text-align: center; }
+.col-src,
+.col-dst   { min-width: 150px; }
+.col-dscp  { width: 100px; }
+.col-vlan  { width: 56px; }
+.col-len   { width: 56px; color: var(--text-dim); text-align: right; }
+
+/* protocol colors */
+.proto-udp  { color: #38bdf8; }
+.proto-tcp  { color: var(--green-hi); }
+.proto-icmp { color: var(--orange); }
+.proto-ip   { color: var(--text-dim); }
+
+/* DSCP tier colors */
+.dscp-ef  { color: var(--red); }
+.dscp-af4 { color: var(--orange); }
+.dscp-af3 { color: #fbbf24; }
+.dscp-af2 { color: var(--green-hi); }
+.dscp-af1 { color: #38bdf8; }
+.dscp-cs  { color: var(--text-dim); }

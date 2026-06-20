@@ -19,226 +19,411 @@
       </svg>
       <span>ClabPktGen</span>
     </div>
-    <div id="statusBadge" class="status-badge idle">
-      <span class="status-dot"></span>
-      <span id="statusText">IDLE</span>
+    <div class="header-badges">
+      <div id="statusBadge" class="status-badge idle">
+        <span class="status-dot"></span>
+        <span class="badge-label">TX</span>
+        <span id="statusText">IDLE</span>
+      </div>
+      <div id="rxStatusBadge" class="status-badge idle">
+        <span class="status-dot"></span>
+        <span class="badge-label">RX</span>
+        <span id="rxStatusText">IDLE</span>
+      </div>
     </div>
   </div>
 </header>
 
 <main>
-  <div class="grid">
 
-    <!-- ─── LEFT COLUMN ─── -->
-    <div class="col">
+  <!-- ─── Tab Bar ─── -->
+  <div class="tab-bar">
+    <button class="mode-tab active" data-tab="tx">
+      <span class="badge tx">TX</span>Transmit
+    </button>
+    <button class="mode-tab" data-tab="rx">
+      <span class="badge rx">RX</span>Receive
+    </button>
+  </div>
 
-      <!-- Layer 2 -->
-      <section class="card">
-        <h2><span class="badge l2">L2</span>Ethernet</h2>
-        <div class="field">
-          <label for="srcMac">Source MAC</label>
-          <input id="srcMac" type="text" value="de:ad:be:ef:00:01" spellcheck="false">
-        </div>
-        <div class="field">
-          <label for="dstMac">Destination MAC</label>
-          <input id="dstMac" type="text" value="ff:ff:ff:ff:ff:ff" spellcheck="false">
-        </div>
-      </section>
+  <!-- ════════════════════════════════════════════════════════════════════
+       TX PANEL
+       ════════════════════════════════════════════════════════════════════ -->
+  <div id="panel-tx" class="panel">
+    <div class="grid">
 
-      <!-- VLAN -->
-      <section class="card">
-        <h2>
-          <span class="badge vlan">802.1Q</span>VLAN
-          <label class="toggle" title="Enable Dot1Q tagging">
-            <input type="checkbox" id="vlanEnable">
-            <span class="toggle-track"><span class="toggle-thumb"></span></span>
-          </label>
-        </h2>
-        <div id="vlanFields" class="collapsible collapsed">
+      <!-- ─── LEFT COLUMN ─── -->
+      <div class="col">
+
+        <!-- Layer 2 -->
+        <section class="card">
+          <h2><span class="badge l2">L2</span>Ethernet</h2>
+          <div class="field">
+            <label for="srcMac">Source MAC</label>
+            <input id="srcMac" type="text" value="de:ad:be:ef:00:01" spellcheck="false">
+          </div>
+          <div class="field">
+            <label for="dstMac">Destination MAC</label>
+            <input id="dstMac" type="text" value="ff:ff:ff:ff:ff:ff" spellcheck="false">
+          </div>
+        </section>
+
+        <!-- VLAN -->
+        <section class="card">
+          <h2>
+            <span class="badge vlan">802.1Q</span>VLAN
+            <label class="toggle" title="Enable Dot1Q tagging">
+              <input type="checkbox" id="vlanEnable">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+          </h2>
+          <div id="vlanFields" class="collapsible collapsed">
+            <div class="field-row">
+              <div class="field">
+                <label for="vlanId">VLAN ID <span class="hint">1–4094</span></label>
+                <input id="vlanId" type="number" value="100" min="1" max="4094">
+              </div>
+              <div class="field">
+                <label for="vlanPcp">PCP / CoS <span class="hint">0–7</span></label>
+                <input id="vlanPcp" type="number" value="0" min="0" max="7">
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Layer 3 -->
+        <section class="card">
+          <h2><span class="badge l3">L3</span>IP</h2>
+          <div class="field">
+            <label for="srcIp">Source IP</label>
+            <input id="srcIp" type="text" value="192.168.1.100" spellcheck="false">
+          </div>
+          <div class="field">
+            <label for="dstIp">Destination IP</label>
+            <input id="dstIp" type="text" value="192.168.1.1" spellcheck="false">
+          </div>
+          <div class="field">
+            <label for="dscpValue">DSCP <span class="hint">0–63</span></label>
+            <div class="dscp-row">
+              <input id="dscpValue" type="number" value="0" min="0" max="63">
+              <select id="dscpSelect">
+                <option value="">— Quick select —</option>
+                <option value="0">CS0 — Best Effort (0)</option>
+                <option value="8">CS1 (8)</option>
+                <option value="10">AF11 (10)</option>
+                <option value="12">AF12 (12)</option>
+                <option value="14">AF13 (14)</option>
+                <option value="16">CS2 (16)</option>
+                <option value="18">AF21 (18)</option>
+                <option value="20">AF22 (20)</option>
+                <option value="22">AF23 (22)</option>
+                <option value="24">CS3 (24)</option>
+                <option value="26">AF31 (26)</option>
+                <option value="28">AF32 (28)</option>
+                <option value="30">AF33 (30)</option>
+                <option value="32">CS4 (32)</option>
+                <option value="34">AF41 (34)</option>
+                <option value="36">AF42 (36)</option>
+                <option value="38">AF43 (38)</option>
+                <option value="40">CS5 (40)</option>
+                <option value="46">EF — Expedited Forwarding (46)</option>
+                <option value="48">CS6 (48)</option>
+                <option value="56">CS7 (56)</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+      </div><!-- /col -->
+
+      <!-- ─── RIGHT COLUMN ─── -->
+      <div class="col">
+
+        <!-- Interface Config -->
+        <section class="card">
+          <h2>
+            <span class="badge net">NET</span>Interface Config
+            <span id="ifacePill" class="iface-pill hidden"></span>
+          </h2>
           <div class="field-row">
             <div class="field">
-              <label for="vlanId">VLAN ID <span class="hint">1–4094</span></label>
-              <input id="vlanId" type="number" value="100" min="1" max="4094">
+              <label for="ifaceConfigIface">Interface</label>
+              <select id="ifaceConfigIface">
+                <option value="eth1">eth1</option>
+              </select>
             </div>
             <div class="field">
-              <label for="vlanPcp">PCP / CoS <span class="hint">0–7</span></label>
-              <input id="vlanPcp" type="number" value="0" min="0" max="7">
+              <label for="ifaceIp">IP / Prefix</label>
+              <input id="ifaceIp" type="text" value="10.1.1.2/24" spellcheck="false">
             </div>
           </div>
-        </div>
-      </section>
-
-      <!-- Layer 3 -->
-      <section class="card">
-        <h2><span class="badge l3">L3</span>IP</h2>
-        <div class="field">
-          <label for="srcIp">Source IP</label>
-          <input id="srcIp" type="text" value="192.168.1.100" spellcheck="false">
-        </div>
-        <div class="field">
-          <label for="dstIp">Destination IP</label>
-          <input id="dstIp" type="text" value="192.168.1.1" spellcheck="false">
-        </div>
-        <div class="field">
-          <label for="dscpValue">DSCP <span class="hint">0–63</span></label>
-          <div class="dscp-row">
-            <input id="dscpValue" type="number" value="0" min="0" max="63">
-            <select id="dscpSelect">
-              <option value="">— Quick select —</option>
-              <option value="0">CS0 — Best Effort (0)</option>
-              <option value="8">CS1 (8)</option>
-              <option value="10">AF11 (10)</option>
-              <option value="12">AF12 (12)</option>
-              <option value="14">AF13 (14)</option>
-              <option value="16">CS2 (16)</option>
-              <option value="18">AF21 (18)</option>
-              <option value="20">AF22 (20)</option>
-              <option value="22">AF23 (22)</option>
-              <option value="24">CS3 (24)</option>
-              <option value="26">AF31 (26)</option>
-              <option value="28">AF32 (28)</option>
-              <option value="30">AF33 (30)</option>
-              <option value="32">CS4 (32)</option>
-              <option value="34">AF41 (34)</option>
-              <option value="36">AF42 (36)</option>
-              <option value="38">AF43 (38)</option>
-              <option value="40">CS5 (40)</option>
-              <option value="46">EF — Expedited Forwarding (46)</option>
-              <option value="48">CS6 (48)</option>
-              <option value="56">CS7 (56)</option>
-            </select>
+          <div class="iface-actions">
+            <button id="btnIfaceUp" class="btn btn-success">Configure</button>
+            <button id="btnIfaceDown" class="btn btn-danger">Reset</button>
           </div>
-        </div>
-      </section>
+        </section>
 
-    </div><!-- /col -->
+        <!-- Routes -->
+        <section class="card">
+          <h2><span class="badge rt">RT</span>Routes</h2>
+          <div class="field-row">
+            <div class="field">
+              <label for="routeDst">Destination</label>
+              <input id="routeDst" type="text" placeholder="10.0.0.0/8" spellcheck="false">
+            </div>
+            <div class="field">
+              <label for="routeNh">Next Hop</label>
+              <input id="routeNh" type="text" placeholder="10.1.1.1" spellcheck="false">
+            </div>
+          </div>
+          <div class="field-row" style="align-items:flex-end">
+            <div class="field" style="margin-bottom:0">
+              <label for="routeIface">Interface</label>
+              <select id="routeIface">
+                <option value="eth1">eth1</option>
+              </select>
+            </div>
+            <button id="btnRouteAdd" class="btn btn-primary" style="margin-bottom:0">Add Route</button>
+          </div>
+          <div id="routeList" class="route-list"></div>
+          <button id="btnRouteClear" class="btn-link route-clear hidden">Clear All Routes</button>
+        </section>
 
-    <!-- ─── RIGHT COLUMN ─── -->
-    <div class="col">
-
-      <!-- Interface Config -->
-      <section class="card">
-        <h2>
-          <span class="badge net">NET</span>Interface Config
-          <span id="ifacePill" class="iface-pill hidden"></span>
-        </h2>
-        <div class="field-row">
+        <!-- Layer 4 -->
+        <section class="card">
+          <h2><span class="badge l4">L4</span>Transport</h2>
           <div class="field">
-            <label for="ifaceConfigIface">Interface</label>
-            <select id="ifaceConfigIface">
+            <label>Protocol</label>
+            <div class="seg-group" id="protoGroup">
+              <button class="seg active" data-value="udp">UDP</button>
+              <button class="seg" data-value="tcp">TCP</button>
+              <button class="seg" data-value="icmp">ICMP</button>
+            </div>
+          </div>
+          <div id="portFields" class="field-row">
+            <div class="field">
+              <label for="srcPort">Source Port</label>
+              <input id="srcPort" type="number" value="12345" min="1" max="65535">
+            </div>
+            <div class="field">
+              <label for="dstPort">Destination Port</label>
+              <input id="dstPort" type="number" value="80" min="1" max="65535">
+            </div>
+          </div>
+        </section>
+
+        <!-- Transmission -->
+        <section class="card">
+          <h2><span class="badge tx">TX</span>Transmission</h2>
+          <div class="field">
+            <label for="iface">Interface</label>
+            <select id="iface">
               <option value="eth1">eth1</option>
             </select>
           </div>
           <div class="field">
-            <label for="ifaceIp">IP / Prefix</label>
-            <input id="ifaceIp" type="text" value="10.1.1.2/24" spellcheck="false">
+            <label>Mode</label>
+            <div class="seg-group" id="modeGroup">
+              <button class="seg active" data-value="fixed">Fixed Count</button>
+              <button class="seg" data-value="continuous">Continuous</button>
+            </div>
           </div>
-        </div>
-        <div class="iface-actions">
-          <button id="btnIfaceUp" class="btn btn-success">Configure</button>
-          <button id="btnIfaceDown" class="btn btn-danger">Reset</button>
-        </div>
-      </section>
+          <div id="fixedFields">
+            <div class="field">
+              <label for="pktCount">Packet Count</label>
+              <input id="pktCount" type="number" value="1" min="1" max="10000000">
+            </div>
+          </div>
+          <div id="continuousFields" class="collapsible collapsed">
+            <div class="field">
+              <label for="pktRate">Rate <span class="hint">pps</span></label>
+              <input id="pktRate" type="number" value="10" min="1" max="1000000">
+            </div>
+          </div>
+        </section>
 
-      <!-- Routes -->
-      <section class="card">
-        <h2><span class="badge rt">RT</span>Routes</h2>
-        <div class="field-row">
+        <!-- Payload -->
+        <section class="card">
+          <h2><span class="badge pay">PAY</span>Payload</h2>
           <div class="field">
-            <label for="routeDst">Destination</label>
-            <input id="routeDst" type="text" placeholder="10.0.0.0/8" spellcheck="false">
+            <label for="payload">ASCII Payload</label>
+            <input id="payload" type="text" value="ClabPktGen" spellcheck="false">
           </div>
+        </section>
+
+        <!-- Actions -->
+        <section class="card actions-card">
+          <button id="btnSend" class="btn btn-primary">Send Packet(s)</button>
+          <button id="btnStart" class="btn btn-success hidden">Start Stream</button>
+          <button id="btnStop" class="btn btn-danger hidden">Stop Stream</button>
+        </section>
+
+      </div><!-- /col -->
+    </div><!-- /grid -->
+  </div><!-- /panel-tx -->
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       RX PANEL
+       ════════════════════════════════════════════════════════════════════ -->
+  <div id="panel-rx" class="panel hidden">
+    <div class="grid">
+
+      <!-- ─── LEFT COLUMN: Interface + Socket Listener ─── -->
+      <div class="col">
+
+        <!-- Interface Config -->
+        <section class="card">
+          <h2>
+            <span class="badge net">NET</span>Interface Config
+            <span id="rxIfacePill" class="iface-pill hidden"></span>
+          </h2>
+          <div class="field-row">
+            <div class="field">
+              <label for="rxIfaceSelect">Interface</label>
+              <select id="rxIfaceSelect">
+                <option value="eth1">eth1</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="rxIfaceIp">IP / Prefix</label>
+              <input id="rxIfaceIp" type="text" value="10.1.1.1/24" spellcheck="false">
+            </div>
+          </div>
+          <div class="iface-actions">
+            <button id="btnRxIfaceUp" class="btn btn-success">Configure</button>
+            <button id="btnRxIfaceDown" class="btn btn-danger">Reset</button>
+          </div>
+        </section>
+
+        <!-- Routes -->
+        <section class="card">
+          <h2><span class="badge rt">RT</span>Routes</h2>
+          <div class="field-row">
+            <div class="field">
+              <label for="rxRouteDst">Destination</label>
+              <input id="rxRouteDst" type="text" placeholder="10.0.0.0/8" spellcheck="false">
+            </div>
+            <div class="field">
+              <label for="rxRouteNh">Next Hop</label>
+              <input id="rxRouteNh" type="text" placeholder="10.1.1.1" spellcheck="false">
+            </div>
+          </div>
+          <div class="field-row" style="align-items:flex-end">
+            <div class="field" style="margin-bottom:0">
+              <label for="rxRouteIface">Interface</label>
+              <select id="rxRouteIface">
+                <option value="eth1">eth1</option>
+              </select>
+            </div>
+            <button id="btnRxRouteAdd" class="btn btn-primary" style="margin-bottom:0">Add Route</button>
+          </div>
+          <div id="rxRouteList" class="route-list"></div>
+          <button id="btnRxRouteClear" class="btn-link route-clear hidden">Clear All Routes</button>
+        </section>
+
+        <!-- Socket Listener -->
+        <section class="card">
+          <h2><span class="badge rx">SKT</span>Socket Listener</h2>
           <div class="field">
-            <label for="routeNh">Next Hop</label>
-            <input id="routeNh" type="text" placeholder="10.1.1.1" spellcheck="false">
+            <label>Protocol</label>
+            <div class="seg-group" id="listenerProtoGroup">
+              <button class="seg active" data-value="tcp">TCP</button>
+              <button class="seg" data-value="udp">UDP</button>
+            </div>
           </div>
-        </div>
-        <div class="field-row" style="align-items:flex-end">
-          <div class="field" style="margin-bottom:0">
-            <label for="routeIface">Interface</label>
-            <select id="routeIface">
+          <div class="field-row">
+            <div class="field">
+              <label for="listenerPort">Port</label>
+              <input id="listenerPort" type="number" value="8888" min="1" max="65535">
+            </div>
+            <div class="field">
+              <label for="listenerBindIp">Bind IP <span class="hint">0.0.0.0 = any</span></label>
+              <input id="listenerBindIp" type="text" value="0.0.0.0" spellcheck="false">
+            </div>
+          </div>
+          <div class="rx-actions">
+            <button id="btnListenerStart" class="btn btn-success">Start Listener</button>
+            <button id="btnListenerStop" class="btn btn-danger hidden">Stop Listener</button>
+          </div>
+          <div id="listenerStats" class="listener-stats hidden">
+            <span class="pulse-dot"></span>
+            <span id="listenerCount">0</span>&thinsp;<span id="listenerCountLabel">connections</span> accepted
+          </div>
+        </section>
+
+      </div><!-- /left col -->
+
+      <!-- ─── RIGHT COLUMN: Passive Capture ─── -->
+      <div class="col">
+
+        <section class="card">
+          <h2>
+            <span class="badge cap">CAP</span>Passive Capture
+            <span id="rxLiveCounter" class="live-counter hidden" style="margin-left:auto">
+              <span class="pulse-dot"></span>
+              <span id="rxLiveCount">0</span> pkts
+            </span>
+          </h2>
+          <div class="field">
+            <label for="rxIface">Interface</label>
+            <select id="rxIface">
               <option value="eth1">eth1</option>
             </select>
           </div>
-          <button id="btnRouteAdd" class="btn btn-primary" style="margin-bottom:0">Add Route</button>
-        </div>
-        <div id="routeList" class="route-list"></div>
-        <button id="btnRouteClear" class="btn-link route-clear hidden">Clear All Routes</button>
-      </section>
-
-      <!-- Layer 4 -->
-      <section class="card">
-        <h2><span class="badge l4">L4</span>Transport</h2>
-        <div class="field">
-          <label>Protocol</label>
-          <div class="seg-group" id="protoGroup">
-            <button class="seg active" data-value="udp">UDP</button>
-            <button class="seg" data-value="tcp">TCP</button>
-            <button class="seg" data-value="icmp">ICMP</button>
-          </div>
-        </div>
-        <div id="portFields" class="field-row">
           <div class="field">
-            <label for="srcPort">Source Port</label>
-            <input id="srcPort" type="number" value="12345" min="1" max="65535">
+            <label>Protocol Filter</label>
+            <div class="seg-group" id="rxProtoGroup">
+              <button class="seg active" data-value="all">All</button>
+              <button class="seg" data-value="udp">UDP</button>
+              <button class="seg" data-value="tcp">TCP</button>
+              <button class="seg" data-value="icmp">ICMP</button>
+            </div>
           </div>
           <div class="field">
-            <label for="dstPort">Destination Port</label>
-            <input id="dstPort" type="number" value="80" min="1" max="65535">
+            <label for="rxPort">Port Filter <span class="hint">optional</span></label>
+            <input id="rxPort" type="number" placeholder="any" min="1" max="65535">
           </div>
-        </div>
-      </section>
-
-      <!-- Transmission -->
-      <section class="card">
-        <h2><span class="badge tx">TX</span>Transmission</h2>
-        <div class="field">
-          <label for="iface">Interface</label>
-          <select id="iface">
-            <option value="eth1">eth1</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Mode</label>
-          <div class="seg-group" id="modeGroup">
-            <button class="seg active" data-value="fixed">Fixed Count</button>
-            <button class="seg" data-value="continuous">Continuous</button>
+          <div class="rx-actions">
+            <button id="btnRxStart" class="btn btn-success">Start Capture</button>
+            <button id="btnRxStop" class="btn btn-danger hidden">Stop Capture</button>
           </div>
-        </div>
-        <div id="fixedFields">
-          <div class="field">
-            <label for="pktCount">Packet Count</label>
-            <input id="pktCount" type="number" value="1" min="1" max="10000000">
-          </div>
-        </div>
-        <div id="continuousFields" class="collapsible collapsed">
-          <div class="field">
-            <label for="pktRate">Rate <span class="hint">pps</span></label>
-            <input id="pktRate" type="number" value="10" min="1" max="1000000">
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <!-- Payload -->
-      <section class="card">
-        <h2><span class="badge pay">PAY</span>Payload</h2>
-        <div class="field">
-          <label for="payload">ASCII Payload</label>
-          <input id="payload" type="text" value="ClabPktGen" spellcheck="false">
-        </div>
-      </section>
+      </div><!-- /right col -->
+    </div><!-- /grid -->
 
-      <!-- Actions -->
-      <section class="card actions-card">
-        <button id="btnSend" class="btn btn-primary">Send Packet(s)</button>
-        <button id="btnStart" class="btn btn-success hidden">Start Stream</button>
-        <button id="btnStop" class="btn btn-danger hidden">Stop Stream</button>
-      </section>
+    <!-- Capture Table (full width) -->
+    <section class="card capture-card">
+      <div class="capture-header">
+        <h2><span class="badge cap">CAP</span>Captured Packets</h2>
+        <button id="btnRxClear" class="btn-link">Clear</button>
+      </div>
+      <div id="captureWrap" class="capture-table-wrap">
+        <table class="capture-table">
+          <thead>
+            <tr>
+              <th class="col-id">#</th>
+              <th class="col-time">Time</th>
+              <th class="col-proto">Proto</th>
+              <th class="col-src">Source</th>
+              <th class="col-dst">Destination</th>
+              <th class="col-dscp">DSCP</th>
+              <th class="col-vlan">VLAN</th>
+              <th class="col-len">Len</th>
+            </tr>
+          </thead>
+          <tbody id="captureBody">
+            <tr id="captureEmpty">
+              <td colspan="8" class="capture-empty-msg">No packets captured — start capture to begin.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-    </div><!-- /col -->
-  </div><!-- /grid -->
+  </div><!-- /panel-rx -->
 
-  <!-- Log -->
+  <!-- ─── Log (always visible) ─── -->
   <section class="card log-card">
     <div class="log-header">
       <h2><span class="badge log">LOG</span>Output</h2>

@@ -1,24 +1,45 @@
+import datetime
+import socket
 import threading
-from scapy.all import Ether, Dot1Q, IP, UDP, TCP, ICMP, Raw, sendp, get_if_list
+from collections import deque
+from scapy.all import (
+    AsyncSniffer, Ether, Dot1Q, IP, UDP, TCP, ICMP, Raw,
+    sendp, get_if_list,
+)
+
+# ─── TX state ─────────────────────────────────────────────────────────────────
 
 _send_thread: threading.Thread | None = None
 _stop_event = threading.Event()
 _sent_count = 0
+
+# ─── Passive capture state ────────────────────────────────────────────────────
+
+_rx_sniffer: AsyncSniffer | None = None
+_rx_packets: deque = deque(maxlen=500)
+_rx_lock = threading.Lock()
+_rx_total = 0   # monotonic; used as "since" baseline for incremental polling
+
+# ─── Socket listener state ────────────────────────────────────────────────────
+
+_listener_thread: threading.Thread | None = None
+_listener_stop = threading.Event()
+_listener_count = 0   # TCP: connections accepted  |  UDP: datagrams received
+_listener_lock = threading.Lock()
 
 
 def get_interfaces() -> list[str]:
     return get_if_list()
 
 
+# ─── TX ───────────────────────────────────────────────────────────────────────
+
 def _build_packet(cfg: dict):
     eth = Ether(src=cfg["src_mac"], dst=cfg["dst_mac"])
-
     if cfg.get("vlan_id") is not None:
         eth = eth / Dot1Q(vlan=cfg["vlan_id"], prio=cfg.get("vlan_pcp", 0))
-
-    # DSCP occupies the high 6 bits of the ToS/DSCP byte
+    # DSCP occupies the high 6 bits of the ToS byte
     ip = IP(src=cfg["src_ip"], dst=cfg["dst_ip"], tos=cfg.get("dscp", 0) << 2)
-
     proto = cfg.get("protocol", "udp").lower()
     if proto == "tcp":
         transport = TCP(sport=cfg.get("src_port", 12345), dport=cfg.get("dst_port", 80), flags="S")
@@ -26,7 +47,6 @@ def _build_packet(cfg: dict):
         transport = ICMP()
     else:
         transport = UDP(sport=cfg.get("src_port", 12345), dport=cfg.get("dst_port", 80))
-
     payload = cfg.get("payload", "ClabPktGen")
     return eth / ip / transport / Raw(load=payload.encode())
 
@@ -75,3 +95,179 @@ def is_sending() -> bool:
 
 def sent_count() -> int:
     return _sent_count
+
+
+# ─── Passive Capture ──────────────────────────────────────────────────────────
+
+def _process_packet(pkt):
+    global _rx_total
+    if not pkt.haslayer(IP):
+        return
+
+    _rx_total += 1
+    now = datetime.datetime.now()
+
+    record: dict = {
+        "id":       _rx_total,
+        "time":     f"{now.strftime('%H:%M:%S')}.{now.microsecond // 1000:03d}",
+        "protocol": "IP",
+        "src_ip":   pkt[IP].src,
+        "dst_ip":   pkt[IP].dst,
+        "src_port": None,
+        "dst_port": None,
+        "dscp":     pkt[IP].tos >> 2,
+        "vlan":     pkt[Dot1Q].vlan if pkt.haslayer(Dot1Q) else None,
+        "length":   len(pkt),
+    }
+
+    if pkt.haslayer(TCP):
+        record["protocol"] = "TCP"
+        record["src_port"] = pkt[TCP].sport
+        record["dst_port"] = pkt[TCP].dport
+    elif pkt.haslayer(UDP):
+        record["protocol"] = "UDP"
+        record["src_port"] = pkt[UDP].sport
+        record["dst_port"] = pkt[UDP].dport
+    elif pkt.haslayer(ICMP):
+        record["protocol"] = "ICMP"
+
+    with _rx_lock:
+        _rx_packets.append(record)
+
+
+def start_rx(iface: str, protocol: str = "all", port: int | None = None) -> tuple[bool, str]:
+    global _rx_sniffer, _rx_total
+    if _rx_sniffer is not None and _rx_sniffer.running:
+        return False, "Already capturing"
+
+    with _rx_lock:
+        _rx_packets.clear()
+    _rx_total = 0
+
+    parts: list[str] = []
+    if protocol.lower() in ("udp", "tcp", "icmp"):
+        parts.append(protocol.lower())
+    if port is not None:
+        parts.append(f"port {port}")
+    bpf = " and ".join(parts) or None
+
+    _rx_sniffer = AsyncSniffer(iface=iface, filter=bpf, prn=_process_packet, store=False)
+    _rx_sniffer.start()
+    return True, "Capture started"
+
+
+def stop_rx() -> int:
+    global _rx_sniffer
+    if _rx_sniffer is not None and _rx_sniffer.running:
+        _rx_sniffer.stop()
+    _rx_sniffer = None
+    return _rx_total
+
+
+def get_rx_packets(since: int = 0) -> list[dict]:
+    with _rx_lock:
+        return [p for p in _rx_packets if p["id"] > since]
+
+
+def clear_rx_packets() -> int:
+    """Clear buffer; return current total so caller can update its since-baseline."""
+    with _rx_lock:
+        _rx_packets.clear()
+    return _rx_total
+
+
+def is_receiving() -> bool:
+    return _rx_sniffer is not None and _rx_sniffer.running
+
+
+def rx_count() -> int:
+    return _rx_total
+
+
+# ─── Socket Listener ──────────────────────────────────────────────────────────
+
+def _handle_tcp_conn(conn: socket.socket):
+    try:
+        conn.settimeout(30.0)
+        while True:
+            data = conn.recv(4096)
+            if not data:
+                break
+            conn.sendall(b"ClabPktGen ACK: " + data)
+    except Exception:
+        pass
+    finally:
+        conn.close()
+
+
+def _listener_tcp_worker(bind_ip: str, port: int):
+    global _listener_count
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.settimeout(1.0)
+    try:
+        sock.bind((bind_ip, port))
+        sock.listen(32)
+        while not _listener_stop.is_set():
+            try:
+                conn, _addr = sock.accept()
+            except socket.timeout:
+                continue
+            with _listener_lock:
+                _listener_count += 1
+            threading.Thread(target=_handle_tcp_conn, args=(conn,), daemon=True).start()
+    finally:
+        sock.close()
+
+
+def _listener_udp_worker(bind_ip: str, port: int):
+    global _listener_count
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.settimeout(1.0)
+    try:
+        sock.bind((bind_ip, port))
+        while not _listener_stop.is_set():
+            try:
+                data, addr = sock.recvfrom(4096)
+            except socket.timeout:
+                continue
+            with _listener_lock:
+                _listener_count += 1
+            try:
+                sock.sendto(b"ClabPktGen ACK: " + data, addr)
+            except Exception:
+                pass
+    finally:
+        sock.close()
+
+
+def start_listener(protocol: str, port: int, bind_ip: str = "0.0.0.0") -> tuple[bool, str]:
+    global _listener_thread, _listener_count
+    if _listener_thread is not None and _listener_thread.is_alive():
+        return False, "Listener already running"
+    _listener_stop.clear()
+    with _listener_lock:
+        _listener_count = 0
+    worker = _listener_tcp_worker if protocol.lower() == "tcp" else _listener_udp_worker
+    _listener_thread = threading.Thread(target=worker, args=(bind_ip, port), daemon=True)
+    _listener_thread.start()
+    return True, f"Listening on {bind_ip}:{port}/{protocol.upper()}"
+
+
+def stop_listener() -> int:
+    global _listener_thread
+    _listener_stop.set()
+    if _listener_thread is not None:
+        _listener_thread.join(timeout=3.0)
+    _listener_thread = None
+    return _listener_count
+
+
+def is_listening() -> bool:
+    return _listener_thread is not None and _listener_thread.is_alive()
+
+
+def listener_count() -> int:
+    with _listener_lock:
+        return _listener_count
