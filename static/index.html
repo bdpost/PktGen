@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClabPktGen</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/>
+        <line x1="12" y1="2" x2="12" y2="22"/>
+        <line x1="2" y1="8.5" x2="22" y2="8.5"/>
+        <line x1="2" y1="15.5" x2="22" y2="15.5"/>
+      </svg>
+      <span>ClabPktGen</span>
+    </div>
+    <div id="statusBadge" class="status-badge idle">
+      <span class="status-dot"></span>
+      <span id="statusText">IDLE</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="grid">
+
+    <!-- ─── LEFT COLUMN ─── -->
+    <div class="col">
+
+      <!-- Layer 2 -->
+      <section class="card">
+        <h2><span class="badge l2">L2</span>Ethernet</h2>
+        <div class="field">
+          <label for="srcMac">Source MAC</label>
+          <input id="srcMac" type="text" value="de:ad:be:ef:00:01" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="dstMac">Destination MAC</label>
+          <input id="dstMac" type="text" value="ff:ff:ff:ff:ff:ff" spellcheck="false">
+        </div>
+      </section>
+
+      <!-- VLAN -->
+      <section class="card">
+        <h2>
+          <span class="badge vlan">802.1Q</span>VLAN
+          <label class="toggle" title="Enable Dot1Q tagging">
+            <input type="checkbox" id="vlanEnable">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+        </h2>
+        <div id="vlanFields" class="collapsible collapsed">
+          <div class="field-row">
+            <div class="field">
+              <label for="vlanId">VLAN ID <span class="hint">1–4094</span></label>
+              <input id="vlanId" type="number" value="100" min="1" max="4094">
+            </div>
+            <div class="field">
+              <label for="vlanPcp">PCP / CoS <span class="hint">0–7</span></label>
+              <input id="vlanPcp" type="number" value="0" min="0" max="7">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Layer 3 -->
+      <section class="card">
+        <h2><span class="badge l3">L3</span>IP</h2>
+        <div class="field">
+          <label for="srcIp">Source IP</label>
+          <input id="srcIp" type="text" value="192.168.1.100" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="dstIp">Destination IP</label>
+          <input id="dstIp" type="text" value="192.168.1.1" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="dscpValue">DSCP <span class="hint">0–63</span></label>
+          <div class="dscp-row">
+            <input id="dscpValue" type="number" value="0" min="0" max="63">
+            <select id="dscpSelect">
+              <option value="">— Quick select —</option>
+              <option value="0">CS0 — Best Effort (0)</option>
+              <option value="8">CS1 (8)</option>
+              <option value="10">AF11 (10)</option>
+              <option value="12">AF12 (12)</option>
+              <option value="14">AF13 (14)</option>
+              <option value="16">CS2 (16)</option>
+              <option value="18">AF21 (18)</option>
+              <option value="20">AF22 (20)</option>
+              <option value="22">AF23 (22)</option>
+              <option value="24">CS3 (24)</option>
+              <option value="26">AF31 (26)</option>
+              <option value="28">AF32 (28)</option>
+              <option value="30">AF33 (30)</option>
+              <option value="32">CS4 (32)</option>
+              <option value="34">AF41 (34)</option>
+              <option value="36">AF42 (36)</option>
+              <option value="38">AF43 (38)</option>
+              <option value="40">CS5 (40)</option>
+              <option value="46">EF — Expedited Forwarding (46)</option>
+              <option value="48">CS6 (48)</option>
+              <option value="56">CS7 (56)</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /col -->
+
+    <!-- ─── RIGHT COLUMN ─── -->
+    <div class="col">
+
+      <!-- Layer 4 -->
+      <section class="card">
+        <h2><span class="badge l4">L4</span>Transport</h2>
+        <div class="field">
+          <label>Protocol</label>
+          <div class="seg-group" id="protoGroup">
+            <button class="seg active" data-value="udp">UDP</button>
+            <button class="seg" data-value="tcp">TCP</button>
+            <button class="seg" data-value="icmp">ICMP</button>
+          </div>
+        </div>
+        <div id="portFields" class="field-row">
+          <div class="field">
+            <label for="srcPort">Source Port</label>
+            <input id="srcPort" type="number" value="12345" min="1" max="65535">
+          </div>
+          <div class="field">
+            <label for="dstPort">Destination Port</label>
+            <input id="dstPort" type="number" value="80" min="1" max="65535">
+          </div>
+        </div>
+      </section>
+
+      <!-- Transmission -->
+      <section class="card">
+        <h2><span class="badge tx">TX</span>Transmission</h2>
+        <div class="field">
+          <label for="iface">Interface</label>
+          <select id="iface">
+            <option value="eth1">eth1</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Mode</label>
+          <div class="seg-group" id="modeGroup">
+            <button class="seg active" data-value="fixed">Fixed Count</button>
+            <button class="seg" data-value="continuous">Continuous</button>
+          </div>
+        </div>
+        <div id="fixedFields">
+          <div class="field">
+            <label for="pktCount">Packet Count</label>
+            <input id="pktCount" type="number" value="1" min="1" max="10000000">
+          </div>
+        </div>
+        <div id="continuousFields" class="collapsible collapsed">
+          <div class="field">
+            <label for="pktRate">Rate <span class="hint">pps</span></label>
+            <input id="pktRate" type="number" value="10" min="1" max="1000000">
+          </div>
+        </div>
+      </section>
+
+      <!-- Payload -->
+      <section class="card">
+        <h2><span class="badge pay">PAY</span>Payload</h2>
+        <div class="field">
+          <label for="payload">ASCII Payload</label>
+          <input id="payload" type="text" value="ClabPktGen" spellcheck="false">
+        </div>
+      </section>
+
+      <!-- Actions -->
+      <section class="card actions-card">
+        <button id="btnSend" class="btn btn-primary">Send Packet(s)</button>
+        <button id="btnStart" class="btn btn-success hidden">Start Stream</button>
+        <button id="btnStop" class="btn btn-danger hidden">Stop Stream</button>
+      </section>
+
+    </div><!-- /col -->
+  </div><!-- /grid -->
+
+  <!-- Log -->
+  <section class="card log-card">
+    <div class="log-header">
+      <h2><span class="badge log">LOG</span>Output</h2>
+      <div class="log-meta">
+        <span id="liveCounter" class="live-counter hidden">
+          <span class="pulse-dot"></span>
+          <span id="liveCount">0</span> sent
+        </span>
+        <button id="btnClear" class="btn-link">Clear</button>
+      </div>
+    </div>
+    <div id="logOutput" class="log-output">
+      <div class="log-line log-info">Ready — configure packet fields and click Send.</div>
+    </div>
+  </section>
+
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

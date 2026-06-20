@@ -1,0 +1,14 @@
+services:
+  pktgen:
+    build: .
+    container_name: clabpktgen-dev
+    ports:
+      - "8080:8080"
+    cap_add:
+      - NET_ADMIN   # ip route manipulation
+      - NET_RAW     # raw socket / Scapy
+    # privileged covers any edge-case capability gaps on older kernels
+    privileged: true
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
