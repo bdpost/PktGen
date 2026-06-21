@@ -171,22 +171,61 @@ interface Ethernet1
 
 ## Static Management Routes
 
-Static routes are injected at startup via the `STATIC_ROUTES` environment variable — no image rebuild needed.
+Static routes are injected at startup via the `STATIC_ROUTES` environment variable — no image rebuild needed. This is the primary mechanism for management reach-back routes on `eth0`.
 
-**Format:** comma-separated `prefix|nexthop|dev` triplets.
+### Format
+
+Comma-separated `prefix|nexthop|dev` triplets:
 
 ```
-STATIC_ROUTES=10.0.2.0/24|10.64.254.1|eth0,10.77.7.0/24|10.64.254.1|eth0
+prefix/len|next-hop-ip|interface[,prefix/len|next-hop-ip|interface,...]
 ```
 
-Set it in your Containerlab topology:
+### Setting routes in a Containerlab topology
 
 ```yaml
-env:
-  STATIC_ROUTES: "10.0.2.0/24|10.64.254.1|eth0,10.77.7.0/24|10.64.254.1|eth0,10.255.2.0/24|10.64.254.1|eth0"
+nodes:
+  pktgen:
+    kind: linux
+    image: ghcr.io/bdpost/clabpktgen:latest
+    env:
+      STATIC_ROUTES: "10.0.2.0/24|10.64.254.1|eth0,10.77.7.0/24|10.64.254.1|eth0,10.255.2.0/24|10.64.254.1|eth0"
 ```
 
-If `STATIC_ROUTES` is unset, no routes are added at startup. Routes can also be added and removed at runtime via the GUI or the `/api/routes/*` endpoints.
+Each topology file can specify its own routes — no rebuild required when moving between labs.
+
+### Setting routes in docker-compose (local dev)
+
+Uncomment and edit the `STATIC_ROUTES` line in `docker-compose.yml`:
+
+```yaml
+environment:
+  - PYTHONUNBUFFERED=1
+  - STATIC_ROUTES=10.0.2.0/24|10.64.254.1|eth0,10.77.7.0/24|10.64.254.1|eth0
+```
+
+### Adding routes at runtime
+
+Routes can be added, removed, or flushed at any time without restarting the container — either through the GUI (Routes panel) or the API:
+
+```bash
+# Add a route
+curl -X POST http://<pktgen-ip>:8080/api/routes/add \
+  -H "Content-Type: application/json" \
+  -d '{"prefix": "10.0.2.0/24", "nexthop": "10.64.254.1", "interface": "eth0"}'
+
+# Remove a route
+curl -X POST http://<pktgen-ip>:8080/api/routes/del \
+  -H "Content-Type: application/json" \
+  -d '{"prefix": "10.0.2.0/24", "nexthop": "10.64.254.1", "interface": "eth0"}'
+
+# Flush all routes on an interface
+curl -X POST http://<pktgen-ip>:8080/api/routes/flush \
+  -H "Content-Type: application/json" \
+  -d '{"interface": "eth0"}'
+```
+
+> **Note:** Runtime routes are not persisted. On container restart, only the routes in `STATIC_ROUTES` are re-applied.
 
 ---
 
