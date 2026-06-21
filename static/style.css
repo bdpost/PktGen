@@ -614,6 +614,10 @@ select {
 
 .capture-header h2 { margin-bottom: 0; flex: 1; }
 
+.capture-header-actions { display: flex; align-items: center; gap: 10px; }
+
+.btn-sm { padding: 4px 10px; font-size: 0.78rem; }
+
 .capture-table-wrap {
   overflow-x: auto;
   overflow-y: auto;

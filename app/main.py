@@ -2,9 +2,12 @@ import os
 import subprocess
 from typing import Optional
 
+from io import BytesIO
+
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from scapy.all import wrpcap
 from pydantic import BaseModel
 
 import packet_gen
@@ -267,6 +270,21 @@ async def rx_packets(since: int = 0):
 async def rx_clear():
     baseline = packet_gen.clear_rx_packets()
     return {"status": "ok", "baseline": baseline}
+
+
+@app.get("/api/rx/pcap")
+async def rx_pcap():
+    pkts = packet_gen.get_rx_raw_packets()
+    if not pkts:
+        raise HTTPException(status_code=404, detail="No packets captured")
+    buf = BytesIO()
+    wrpcap(buf, pkts)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.tcpdump.pcap",
+        headers={"Content-Disposition": "attachment; filename=capture.pcap"},
+    )
 
 
 # ─── Socket Listener endpoints ────────────────────────────────────────────────

@@ -103,6 +103,7 @@ const els = {
   captureWrap:        $('captureWrap'),
   captureBody:        $('captureBody'),
   btnRxClear:         $('btnRxClear'),
+  btnDownloadPcap:    $('btnDownloadPcap'),
 };
 
 // ─── Logging ──────────────────────────────────────────────────────────────────
@@ -796,6 +797,11 @@ function startListenerPoll() {
 function stopListenerPoll() {
   if (listenerPollTimer) { clearInterval(listenerPollTimer); listenerPollTimer = null; }
 }
+
+// ─── Download PCAP ────────────────────────────────────────────────────────────
+els.btnDownloadPcap.addEventListener('click', () => {
+  window.location.href = '/api/rx/pcap';
+});
 
 // ─── Clear Log ────────────────────────────────────────────────────────────────
 els.btnClear.addEventListener('click', () => { els.logOutput.innerHTML = ''; });

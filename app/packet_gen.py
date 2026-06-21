@@ -12,13 +12,18 @@ from scapy.all import (
 _send_thread: threading.Thread | None = None
 _stop_event = threading.Event()
 _sent_count = 0
+_tx_timer: threading.Timer | None = None
+
+_AUTO_STOP_SECS = 300  # 5 minutes
 
 # ─── Passive capture state ────────────────────────────────────────────────────
 
 _rx_sniffer: AsyncSniffer | None = None
 _rx_packets: deque = deque(maxlen=500)
+_rx_raw_packets: deque = deque(maxlen=500)  # raw Scapy packets for pcap export
 _rx_lock = threading.Lock()
 _rx_total = 0   # monotonic; used as "since" baseline for incremental polling
+_rx_timer: threading.Timer | None = None
 
 # ─── Socket listener state ────────────────────────────────────────────────────
 
@@ -77,7 +82,7 @@ def _continuous_worker(cfg: dict, rate: float, iface: str):
 
 
 def start_continuous(cfg: dict, rate: float, iface: str) -> tuple[bool, str]:
-    global _send_thread
+    global _send_thread, _tx_timer
     if _send_thread and _send_thread.is_alive():
         return False, "Already sending"
     _stop_event.clear()
@@ -85,11 +90,17 @@ def start_continuous(cfg: dict, rate: float, iface: str) -> tuple[bool, str]:
         target=_continuous_worker, args=(cfg, rate, iface), daemon=True
     )
     _send_thread.start()
+    _tx_timer = threading.Timer(_AUTO_STOP_SECS, stop_continuous)
+    _tx_timer.daemon = True
+    _tx_timer.start()
     return True, "Stream started"
 
 
 def stop_continuous() -> int:
-    global _sent_count
+    global _sent_count, _tx_timer
+    if _tx_timer:
+        _tx_timer.cancel()
+        _tx_timer = None
     _stop_event.set()
     if _send_thread:
         _send_thread.join(timeout=3.0)
@@ -140,15 +151,17 @@ def _process_packet(pkt):
 
     with _rx_lock:
         _rx_packets.append(record)
+        _rx_raw_packets.append(pkt)
 
 
 def start_rx(iface: str, protocol: str = "all", port: int | None = None) -> tuple[bool, str]:
-    global _rx_sniffer, _rx_total
+    global _rx_sniffer, _rx_total, _rx_timer
     if _rx_sniffer is not None and _rx_sniffer.running:
         return False, "Already capturing"
 
     with _rx_lock:
         _rx_packets.clear()
+        _rx_raw_packets.clear()
     _rx_total = 0
 
     parts: list[str] = []
@@ -160,11 +173,17 @@ def start_rx(iface: str, protocol: str = "all", port: int | None = None) -> tupl
 
     _rx_sniffer = AsyncSniffer(iface=iface, filter=bpf, prn=_process_packet, store=False)
     _rx_sniffer.start()
+    _rx_timer = threading.Timer(_AUTO_STOP_SECS, stop_rx)
+    _rx_timer.daemon = True
+    _rx_timer.start()
     return True, "Capture started"
 
 
 def stop_rx() -> int:
-    global _rx_sniffer
+    global _rx_sniffer, _rx_timer
+    if _rx_timer:
+        _rx_timer.cancel()
+        _rx_timer = None
     if _rx_sniffer is not None and _rx_sniffer.running:
         _rx_sniffer.stop()
     _rx_sniffer = None
@@ -176,10 +195,16 @@ def get_rx_packets(since: int = 0) -> list[dict]:
         return [p for p in _rx_packets if p["id"] > since]
 
 
+def get_rx_raw_packets() -> list:
+    with _rx_lock:
+        return list(_rx_raw_packets)
+
+
 def clear_rx_packets() -> int:
     """Clear buffer; return current total so caller can update its since-baseline."""
     with _rx_lock:
         _rx_packets.clear()
+        _rx_raw_packets.clear()
     return _rx_total
 
 
