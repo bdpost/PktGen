@@ -486,16 +486,20 @@ async function loadInterfaces() {
     const { interfaces, hwaddrs } = await res.json();
     _ifaceHwaddrs = hwaddrs || {};
 
+    const preferred = interfaces.includes('eth1')
+      ? 'eth1'
+      : interfaces.find(i => i !== 'lo' && i !== 'eth0') || interfaces[0] || 'eth1';
+
     [els.iface, els.ifaceConfigIface, els.routeIface, els.rxIface, els.rxIfaceSelect, els.rxRouteIface].forEach(sel => {
       sel.innerHTML = '';
       interfaces.forEach(iface => {
         const opt = document.createElement('option');
         opt.value = iface;
         opt.textContent = iface;
-        if (iface === 'eth1') opt.selected = true;
+        if (iface === preferred) opt.selected = true;
         sel.appendChild(opt);
       });
-      if ([...sel.options].some(o => o.value === 'eth1')) sel.value = 'eth1';
+      if ([...sel.options].some(o => o.value === preferred)) sel.value = preferred;
     });
 
     // Pre-populate src MAC with the actual TX interface MAC

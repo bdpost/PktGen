@@ -8,9 +8,20 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from scapy.all import PcapWriter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import packet_gen
+
+
+def _default_iface() -> str:
+    """Return eth1 if present; otherwise the first non-loopback, non-mgmt interface."""
+    ifaces = packet_gen.get_interfaces()
+    if "eth1" in ifaces:
+        return "eth1"
+    for iface in ifaces:
+        if iface not in ("lo", "eth0"):
+            return iface
+    return "eth1"
 
 app = FastAPI(title="PktGen")
 
@@ -42,12 +53,12 @@ class PacketConfig(BaseModel):
 
 class SendRequest(PacketConfig):
     count: int = 1
-    interface: str = "eth1"
+    interface: str = Field(default_factory=_default_iface)
 
 
 class StreamRequest(PacketConfig):
     rate: float = 2.0
-    interface: str = "eth1"
+    interface: str = Field(default_factory=_default_iface)
 
 
 def _cfg(req: PacketConfig) -> dict:
@@ -57,12 +68,12 @@ def _cfg(req: PacketConfig) -> dict:
 # ─── Interface models ─────────────────────────────────────────────────────────
 
 class InterfaceUp(BaseModel):
-    interface: str = "eth1"
+    interface: str = Field(default_factory=_default_iface)
     ip: str  # e.g. "10.1.1.2/24"
 
 
 class InterfaceDown(BaseModel):
-    interface: str = "eth1"
+    interface: str = Field(default_factory=_default_iface)
 
 
 # ─── Route models ─────────────────────────────────────────────────────────────
@@ -70,22 +81,22 @@ class InterfaceDown(BaseModel):
 class RouteEntry(BaseModel):
     prefix: str        # e.g. "10.0.0.0/8"
     nexthop: str       # e.g. "10.1.1.1"
-    interface: str = "eth1"
+    interface: str = Field(default_factory=_default_iface)
 
 
 class RouteFlush(BaseModel):
-    interface: str = "eth1"
+    interface: str = Field(default_factory=_default_iface)
 
 
 class ArpResolveRequest(BaseModel):
     ip: str
-    interface: str = "eth1"
+    interface: str = Field(default_factory=_default_iface)
 
 
 # ─── RX models ────────────────────────────────────────────────────────────────
 
 class RxStartRequest(BaseModel):
-    interface: str = "eth1"
+    interface: str = Field(default_factory=_default_iface)
     protocol: str = "all"   # "all" | "udp" | "tcp" | "icmp"
     port: Optional[int] = None
 

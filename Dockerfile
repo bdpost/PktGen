@@ -15,7 +15,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && mkdir -p /run/sshd \
     && ssh-keygen -A \
     && sed -i 's/#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config \
-    && echo "root:clab" | chpasswd
+    && echo "root:clab" | chpasswd \
+    && useradd -m -s /bin/bash admin \
+    && echo "admin:admin" | chpasswd
 
 WORKDIR /app
 

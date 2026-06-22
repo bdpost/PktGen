@@ -312,6 +312,42 @@ docker compose down
 
 ---
 
+## SSH Access
+
+The container runs an SSH server on port 22. Two accounts are available:
+
+| Username | Password | Notes |
+|---|---|---|
+| `root` | `clab` | Full root access |
+| `admin` | `admin` | Standard user |
+
+### Direct access (requires iptables fix on clab machine)
+
+By default, Docker's FORWARD chain drops inbound connections to container IPs that aren't explicitly published. cEOS nodes work because Containerlab wires their management interface directly to the bridge, bypassing Docker's rules. For linux-kind containers, you need to allow forwarding on the clab machine:
+
+```bash
+# Allow all forwarded traffic to the pktgen management subnet (run on the clab machine)
+sudo iptables -I DOCKER-USER -d <mgmt-subnet>/24 -j ACCEPT
+```
+
+This only needs to be run once per clab machine boot. After that, `ssh root@<mgmt-ipv4>` and `ssh admin@<mgmt-ipv4>` work directly.
+
+### Via port publish (alternative)
+
+Add a port mapping for SSH in the topology file:
+
+```yaml
+nodes:
+  pktgen:
+    kind: linux
+    image: ghcr.io/bdpost/clabpktgen:latest
+    ports:
+      - "8080:8080/tcp"
+      - "2222:22/tcp"    # SSH reachable at clab-machine-ip:2222
+```
+
+---
+
 ## API Reference
 
 ### TX
