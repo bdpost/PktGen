@@ -2,6 +2,9 @@ services:
   pktgen:
     build: .
     container_name: clabpktgen-dev
+    # Use 'bridge' (default) for Containerlab deployments where eth1 is attached by clab.
+    # Use 'host' for standalone Pi testing so physical NICs (enx*, eth*) are visible.
+    network_mode: bridge
     ports:
       - "8080:8080"
     cap_add:
