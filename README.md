@@ -377,7 +377,7 @@ docker compose up -d
 ### docker run command
 
 ```bash
-docker run -d \
+docker run -d --pull always \
   --name pktgen \
   --network host \
   --cap-add NET_ADMIN \
@@ -385,7 +385,7 @@ docker run -d \
   --privileged \
   --restart unless-stopped \
   -e PYTHONUNBUFFERED=1 \
-  ghcr.io/bdpost/pktgen:0.0.14
+  ghcr.io/bdpost/pktgen:latest
 ```
 
 Access the GUI at `http://<host-ip>:8080`.
