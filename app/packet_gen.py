@@ -7,7 +7,7 @@ import time
 from collections import deque
 from scapy.all import (
     AsyncSniffer, Ether, Dot1Q, IP, UDP, TCP, ICMP, Raw,
-    sendp, get_if_list, get_if_hwaddr,
+    get_if_list, get_if_hwaddr,
 )
 
 # ─── TX state ─────────────────────────────────────────────────────────────────
@@ -104,38 +104,60 @@ def _build_packet(cfg: dict):
     return eth / ip / transport / Raw(load=payload_bytes)
 
 
+_ETH_P_ALL = 0x0003
+
+
+def _open_raw_socket(iface: str) -> socket.socket:
+    """Raw L2 socket bound to iface; bypasses Scapy's per-packet send overhead."""
+    sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(_ETH_P_ALL))
+    sock.bind((iface, 0))
+    return sock
+
+
 def send_fixed(cfg: dict, count: int, iface: str) -> int:
-    pkt = _build_packet(cfg)
-    sendp(pkt, iface=iface, count=count, inter=0, verbose=False)
+    raw = bytes(_build_packet(cfg))
+    sock = _open_raw_socket(iface)
+    try:
+        send = sock.send
+        for _ in range(count):
+            send(raw)
+    finally:
+        sock.close()
     return count
 
 
 def _continuous_worker(cfg: dict, rate: float, iface: str):
     global _sent_count
     _sent_count = 0
-    pkt = _build_packet(cfg)
+    raw = bytes(_build_packet(cfg))
+    sock = _open_raw_socket(iface)
+    send = sock.send
 
-    if rate <= 0:
-        # Unlimited — blast in large batches to avoid per-call Python overhead
-        batch = 512
+    try:
+        if rate <= 0:
+            # Unlimited — tight loop, no per-packet Scapy/Python overhead
+            while not _stop_event.is_set():
+                for _ in range(2000):
+                    send(raw)
+                _sent_count += 2000
+            return
+
+        # Rate-controlled: compute batch size for a 10 ms window (or longer for
+        # very low rates so we always send at least 1 packet per window).
+        window = max(0.01, 1.0 / rate)
+        batch = max(1, int(rate * window))
+
         while not _stop_event.is_set():
-            sendp(pkt, iface=iface, count=batch, inter=0, verbose=False)
+            t0 = time.monotonic()
+            for _ in range(batch):
+                send(raw)
             _sent_count += batch
-        return
-
-    # Rate-controlled: compute batch size for a 10 ms window (or longer for very
-    # low rates so we always send at least 1 packet per window).
-    window = max(0.01, 1.0 / rate)
-    batch = max(1, int(rate * window))
-
-    while not _stop_event.is_set():
-        t0 = time.monotonic()
-        sendp(pkt, iface=iface, count=batch, inter=0, verbose=False)
-        _sent_count += batch
-        elapsed = time.monotonic() - t0
-        remainder = window - elapsed
-        if remainder > 0.0001:
-            _stop_event.wait(remainder)
+            elapsed = time.monotonic() - t0
+            remainder = window - elapsed
+            if remainder > 0.0001:
+                _stop_event.wait(remainder)
+    finally:
+        sock.close()
 
 
 def start_continuous(cfg: dict, rate: float, iface: str) -> tuple[bool, str]:
